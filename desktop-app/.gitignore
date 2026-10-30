@@ -1,0 +1,62 @@
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+
+title Restaurant POS Desktop Build
+
+echo.
+echo ==========================================
+echo   Building Restaurant POS Windows Installer
+echo ==========================================
+echo.
+
+where node >nul 2>nul
+if errorlevel 1 (
+    echo ERROR: Node.js not found.
+    echo Install Node.js 18+ and try again.
+    pause
+    exit /b 1
+)
+
+where npm >nul 2>nul
+if errorlevel 1 (
+    echo ERROR: npm not found.
+    echo Install Node.js with npm and try again.
+    pause
+    exit /b 1
+)
+
+if not exist "%~dp0package.json" (
+    echo ERROR: desktop-app package.json not found.
+    echo Expected: %~dp0package.json
+    pause
+    exit /b 1
+)
+
+cd /d "%~dp0"
+
+echo Installing Electron dependencies...
+call npm install
+if errorlevel 1 (
+    echo ERROR: npm install failed.
+    pause
+    exit /b 1
+)
+
+echo.
+echo Building Windows installer...
+call npm run package:win
+if errorlevel 1 (
+    echo ERROR: Installer build failed.
+    pause
+    exit /b 1
+)
+
+echo.
+echo ==========================================
+echo   Build completed successfully
+echo ==========================================
+echo Output folder:
+echo   %~dp0dist
+echo.
+pause
+exit /b 0

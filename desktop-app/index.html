@@ -1,65 +1,150 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Restaurant POS</title>
-    <style>
-      html, body {
-        margin: 0;
-        height: 100%;
-        background: #0f172a;
-        color: #f8fafc;
-        font-family: Tahoma, Arial, sans-serif;
-      }
+const { app, BrowserWindow } = require('electron');
+const { spawn } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 
-      body {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
+let backendProcess = null;
+let frontendProcess = null;
+let splashWindow = null;
+let mainWindow = null;
 
-      .card {
-        background: rgba(15, 23, 42, 0.92);
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        border-radius: 20px;
-        padding: 34px 32px;
-        max-width: 720px;
-        box-shadow: 0 30px 60px rgba(0,0,0,0.45);
-      }
+function startBackend() {
+  const backendPath = path.join(__dirname, '..', 'restaurant-api-laravel');
 
-      .badge {
-        display: inline-block;
-        padding: 8px 16px;
-        border-radius: 999px;
-        background: rgba(79, 70, 229, 0.18);
-        border: 1px solid rgba(129, 140, 248, 0.5);
-        color: #c7d2fe;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        font-size: 12px;
-        font-weight: 700;
-      }
+  if (!fs.existsSync(path.join(backendPath, 'artisan'))) {
+    return;
+  }
 
-      h1 {
-        margin: 18px 0 16px;
-        font-size: 44px;
-      }
+  backendProcess = spawn('php', ['artisan', 'serve', '--host', '127.0.0.1', '--port', '8000'], {
+    cwd: backendPath,
+    detached: true,
+    stdio: 'ignore',
+    windowsHide: true,
+    shell: false
+  });
 
-      p {
-        margin: 10px 0;
-        color: #cbd5e1;
-        font-size: 18px;
-        line-height: 1.7;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="card">
-      <div class="badge">Restaurant POS</div>
-      <h1>Starting the application</h1>
-      <p>Loading local frontend and backend in the background.</p>
-      <p>The app is preparing the desktop interface and will launch the restaurant dashboard automatically.</p>
-    </div>
-  </body>
-</html>
+  backendProcess.unref();
+}
+
+function startFrontend() {
+  const frontendPath = path.join(__dirname, '..', 'restaurant-frontend');
+
+  if (!fs.existsSync(path.join(frontendPath, 'package.json'))) {
+    return;
+  }
+
+  const builtFrontend = path.join(frontendPath, 'dist', 'index.html');
+  if (fs.existsSync(builtFrontend)) {
+    return;
+  }
+
+  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+
+  frontendProcess = spawn(
+    npmCommand,
+    ['run', 'dev', '--', '--host', '127.0.0.1', '--port', '5173'],
+    {
+      cwd: frontendPath,
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+      shell: false
+    }
+  );
+
+  frontendProcess.unref();
+}
+
+function createSplashWindow() {
+  splashWindow = new BrowserWindow({
+    width: 820,
+    height: 520,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    movable: false,
+    alwaysOnTop: true,
+    backgroundColor: '#0f172a',
+    show: true,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      enableRemoteModule: false
+    }
+  });
+
+  splashWindow.loadFile(path.join(__dirname, 'index.html'));
+}
+
+function createMainWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    minWidth: 1100,
+    minHeight: 700,
+    backgroundColor: '#0f172a',
+    autoHideMenuBar: true,
+    show: false,
+    title: 'Restaurant POS',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      enableRemoteModule: false
+    }
+  });
+
+  mainWindow.setMenuBarVisibility(false);
+
+  const builtFrontend = path.join(__dirname, '..', 'restaurant-frontend', 'dist', 'index.html');
+
+  if (fs.existsSync(builtFrontend)) {
+    mainWindow.loadFile(builtFrontend);
+  } else {
+    mainWindow.loadURL('http://127.0.0.1:5173');
+  }
+
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+  });
+
+  if (splashWindow) {
+    splashWindow.close();
+    splashWindow = null;
+  }
+}
+
+app.whenReady().then(() => {
+  startBackend();
+  startFrontend();
+  createSplashWindow();
+
+  setTimeout(() => {
+    createMainWindow();
+  }, 1800);
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createMainWindow();
+    }
+  });
+});
+
+app.on('window-all-closed', () => {
+  if (backendProcess) {
+    try {
+      backendProcess.kill();
+    } catch (error) {}
+  }
+
+  if (frontendProcess) {
+    try {
+      frontendProcess.kill();
+    } catch (error) {}
+  }
+
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
