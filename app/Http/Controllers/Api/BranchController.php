@@ -3,59 +3,43 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Branch;
+use App\Http\Requests\StoreBranchRequest;
+use App\Http\Resources\BranchResource;
+use App\Services\BranchService;
 use Illuminate\Http\Request;
 
 class BranchController extends Controller
 {
+    public function __construct(protected BranchService $branchService) {}
+
     public function index()
     {
-        return response()->json(Branch::all());
+        return BranchResource::collection($this->branchService->list());
     }
 
-    public function show($id)
+    public function store(StoreBranchRequest $request)
     {
-        return response()->json(Branch::findOrFail($id));
+        $branch = $this->branchService->create($request->validated());
+
+        return new BranchResource($branch);
     }
 
-    public function store(Request $request)
+    public function show(string $id)
     {
-        $validated = $request->validate([
-            'code' => ['required', 'string', 'max:30', 'unique:branches,code'],
-            'name' => ['required', 'string', 'max:150'],
-            'phone' => ['nullable', 'string', 'max:30'],
-            'address' => ['nullable', 'string'],
-            'tax_id' => ['nullable', 'string', 'max:50'],
-            'currency' => ['nullable', 'string', 'max:10'],
-            'is_active' => ['boolean'],
-        ]);
-
-        $branch = Branch::create($validated);
-
-        return response()->json($branch, 201);
+        return new BranchResource($this->branchService->list()->firstWhere('id', $id));
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, string $id)
     {
-        $branch = Branch::findOrFail($id);
-        $validated = $request->validate([
-            'code' => ['sometimes', 'string', 'max:30', 'unique:branches,code,' . $branch->id],
-            'name' => ['sometimes', 'string', 'max:150'],
-            'phone' => ['nullable', 'string', 'max:30'],
-            'address' => ['nullable', 'string'],
-            'tax_id' => ['nullable', 'string', 'max:50'],
-            'currency' => ['nullable', 'string', 'max:10'],
-            'is_active' => ['boolean'],
-        ]);
+        $branch = \App\Models\Branch::findOrFail($id);
+        $branch = $this->branchService->update($branch, $request->all());
 
-        $branch->update($validated);
-        return response()->json($branch);
+        return new BranchResource($branch);
     }
 
-    public function destroy($id)
+    public function destroy(string $id)
     {
-        $branch = Branch::findOrFail($id);
-        $branch->delete();
+        \App\Models\Branch::destroy($id);
 
         return response()->json(['message' => 'Branch deleted successfully']);
     }

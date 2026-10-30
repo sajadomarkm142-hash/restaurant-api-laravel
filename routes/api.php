@@ -11,14 +11,18 @@ Route::middleware('auth:api')->group(function () {
 
     Route::middleware('role:ADMIN,MANAGER')->group(function () {
         Route::apiResource('branches', App\Http\Controllers\Api\BranchController::class);
+        Route::apiResource('customers', App\Http\Controllers\Api\CustomerController::class);
     });
 
     Route::middleware('role:ADMIN,MANAGER,CASHIER')->group(function () {
-        Route::apiResource('menu-items', App\Http\Controllers\Api\MenuItemController::class);
         Route::get('/orders', [App\Http\Controllers\Api\OrderController::class, 'index']);
-        Route::get('/orders/{id}', [App\Http\Controllers\Api\OrderController::class, 'show']);
         Route::post('/orders', [App\Http\Controllers\Api\OrderController::class, 'store']);
+        Route::get('/orders/{id}', [App\Http\Controllers\Api\OrderController::class, 'show']);
         Route::patch('/orders/{id}/status', [App\Http\Controllers\Api\OrderController::class, 'updateStatus']);
+
+        Route::get('/inventory', [App\Http\Controllers\Api\InventoryController::class, 'index']);
+        Route::get('/inventory/low-stock', [App\Http\Controllers\Api\InventoryController::class, 'lowStock']);
+        Route::post('/inventory/adjust', [App\Http\Controllers\Api\InventoryController::class, 'adjust']);
     });
 
     Route::middleware('permission:reports.view')->group(function () {
