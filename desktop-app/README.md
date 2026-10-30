@@ -1,38 +1,44 @@
 # Restaurant Desktop App
 
-This folder packages the restaurant project as a desktop application using Electron.
+Production-ready desktop wrapper for the restaurant system.
+
+## Features
+- Automatic background launch of Laravel backend
+- Automatic background launch of React frontend
+- Hidden console mode for clean desktop experience
+- Splash-style loading screen
+- Windows installer build with electron-builder
+- Production-ready package for distribution
 
 ## Requirements
+- Windows 10/11
 - Node.js 18+
 - npm
-- Windows machine for final .exe generation
-- Backend project running on `http://localhost:8000`
-- Frontend project running on `http://localhost:5173`
+- Laravel backend at `../restaurant-api-laravel`
+- React frontend at `../restaurant-frontend`
 
 ## Install
-
 ```bash
 cd desktop-app
 npm install
 ```
 
 ## Run locally
-
 ```bash
 npm start
 ```
 
-## Build Windows EXE
-
-Run this on a Windows machine:
-
+## Build Windows installer
 ```bash
 npm run package:win
 ```
 
-The built installer will appear inside the `desktop-app/dist` folder.
+The generated installer will appear in:
+```text
+desktop-app/dist
+```
 
 ## Notes
-- This desktop app loads the local frontend app at `http://localhost:5173`.
-- If the frontend is not running, the app shows a fallback window.
-- The actual `.exe` must be generated on Windows using `electron-builder`.
+- This app hides terminal windows for a smoother desktop experience.
+- The desktop app loads the local frontend automatically.
+- The final `.exe` installer must be generated on a Windows machine.

@@ -1,5 +1,5 @@
 window.addEventListener('DOMContentLoaded', () => {
-  window.electron = {
+  window.electronAPI = {
     platform: process.platform,
   };
 });
